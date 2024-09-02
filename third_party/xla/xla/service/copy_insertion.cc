@@ -2290,8 +2290,6 @@ absl::Status CopyInsertion::RemoveUnnecessaryCopies(
     }
   }
 
-  std::unique_ptr<CallGraph> call_graph = CallGraph::Build(module);
-
   int64_t num_existing_copies = GetNumExistingCopies(module, execution_threads);
   bool changed = true;
   int64_t num_iterations = -1;
