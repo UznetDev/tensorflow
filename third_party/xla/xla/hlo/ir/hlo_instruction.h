@@ -1810,6 +1810,7 @@ class HloInstruction {
   const PtrVec<HloComputation*>& branch_computations() const;
   int branch_count() const;
   HloComputation* branch_computation(int b) const;
+  int branch_index(HloComputation* computation) const;
   // Sets a branch HloComputation for Conditional.
   // The setter should only be called by HloModule or HloComputation methods.
   //

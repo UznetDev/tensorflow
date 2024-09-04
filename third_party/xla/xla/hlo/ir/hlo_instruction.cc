@@ -3411,6 +3411,17 @@ HloComputation* HloInstruction::branch_computation(int b) const {
   return called_computations()[b];
 }
 
+int HloInstruction::branch_index(HloComputation* computation) const {
+  CHECK(HloOpcode::kConditional == opcode_);
+  CHECK_NE(computation, nullptr);
+  for (int idx = 0; idx < branch_count(); idx++) {
+    if (branch_computation(idx) == computation) {
+      return idx;
+    }
+  }
+  CHECK(false);
+}
+
 void HloInstruction::set_branch_computation(int b,
                                             HloComputation* computation) {
   CHECK_EQ(HloOpcode::kConditional, opcode_);
