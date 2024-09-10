@@ -223,6 +223,24 @@ class LightOutsideCompilationTest(test_util.TensorFlowTestCase):
           CHECK: operand_layout_constraints={f32[1,3,2,2]{3,2,1,0}}
           """)
 
+  def testDeviceTensorIsCopiedToHost(self):
+    """Test that a device tensor is copied to host for reading.
+
+    If the tensor is not copied to host, the test will crash because the op
+    attempts to read the tensor on host, but it resides on device.
+    """
+
+    @def_function.function(jit_compile=True)
+    def add_1(values):
+      return test_ops_for_light_outside_compilation.test_device_tensor_is_copied_to_host(
+          values
+      )
+
+    with context.device('/gpu:0'):
+      foo = random_ops.random_normal([3])
+      # No seg fault should happen as the op reads the tensor's value on host.
+      self.assertAllClose(add_1(foo), foo + 1)
+
 
 if __name__ == '__main__':
   ops.enable_eager_execution()
