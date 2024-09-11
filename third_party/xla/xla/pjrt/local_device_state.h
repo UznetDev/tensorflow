@@ -199,6 +199,12 @@ class LocalDeviceState {
   // Returns a fresh, PRNG-generated random seed for an XLA computation.
   int GetNewPrngSeed();
 
+  // Whether to allow deleting a buffer before the operation fulfilling the
+  // buffer is scheduled by the host.
+  bool allow_delete_before_fulfill() const {
+    return allow_delete_before_fulfill_;
+  }
+
  private:
   absl::Status SynchronizeAllActivity();
 
@@ -255,6 +261,8 @@ class LocalDeviceState {
   // semaphore during calls to Execute but release it from a callback and if
   // they are the same thread we might deadlock.
   std::unique_ptr<WorkerThread> callback_thread_;
+
+  bool allow_delete_before_fulfill_ = true;
 };
 
 }  // namespace xla
