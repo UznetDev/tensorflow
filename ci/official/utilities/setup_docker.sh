@@ -24,7 +24,7 @@ if [[ "$TFCI_DOCKER_PULL_ENABLE" == 1 ]]; then
 fi 
 
 if [[ "$TFCI_DOCKER_REBUILD_ENABLE" == 1 ]]; then
-  DOCKER_BUILDKIT=1 docker build --cache-from "$TFCI_DOCKER_IMAGE" -t "$TFCI_DOCKER_IMAGE" $TFCI_DOCKER_REBUILD_ARGS
+  DOCKER_BUILDKIT=1 docker build -t "$TFCI_DOCKER_IMAGE" $TFCI_DOCKER_REBUILD_ARGS
   if [[ "$TFCI_DOCKER_REBUILD_UPLOAD_ENABLE" == 1 ]]; then
     docker push "$TFCI_DOCKER_IMAGE"
   fi
@@ -49,7 +49,7 @@ if ! docker container inspect tf >/dev/null 2>&1 ; then
     echo "GCE_METADATA_HOST=$IP_ADDR" > $env_file
   fi
 
-  docker run $TFCI_DOCKER_ARGS --name tf -w "$WORKING_DIR" -itd --rm \
+  docker run $TFCI_DOCKER_ARGS --name tf -w "$WORKING_DIR" -it \
       -v "$TFCI_GIT_DIR:$WORKING_DIR" \
       --env-file "$env_file" \
       "$TFCI_DOCKER_IMAGE" \
@@ -61,6 +61,44 @@ if ! docker container inspect tf >/dev/null 2>&1 ; then
     CONTAINER_IP_ADDR=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' tf)
     netsh advfirewall firewall add rule name="Allow Metadata Proxy" dir=in action=allow protocol=TCP localport=80 remoteip="$CONTAINER_IP_ADDR"
   fi
+
+  echo "quoct getting logs"
+
+  docker logs -f tf
+
+  echo "quoct hereeee"
+  docker ps -a
+  docker inspect tf
+
+  sleep 10;
+  echo "quoct inspecting"
+  docker ps -a
+  docker inspect tf
+
+  sleep 60;
+  echo "quoct inspecting"
+  docker ps -a
+  docker inspect tf
+
+  sleep 60;
+  echo "quoct inspecting"
+  docker ps -a
+  docker inspect tf
+
+  sleep 60;
+  echo "quoct inspecting"
+  docker ps -a
+  docker inspect tf
+
+  sleep 60;
+  echo "quoct inspecting"
+  docker ps -a
+  docker inspect tf
+
+  sleep 60;
+  echo "quoct inspecting"
+  docker ps -a
+  docker inspect tf
 
 fi
 tfrun() { docker exec tf "$@"; }
