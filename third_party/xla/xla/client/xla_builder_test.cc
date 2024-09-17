@@ -1560,6 +1560,21 @@ TEST(XlaBuilderTest, CheckBufferDonor) {
   EXPECT_FALSE(config.ParameterIsBufferDonor(1, {}));
 }
 
+TEST(XlaBuilderTest, ConstantLiteral) {
+  XlaBuilder b(TestName());
+#ifdef _MM_DENORMALS_ZERO_ON
+  int old_csr = _mm_getcsr();
+  _mm_setcsr(old_csr | _MM_DENORMALS_ZERO_ON);
+#endif
+  ConstantR1<float>(&b, {0.0f, 1.401298e-45f});
+#ifdef _MM_DENORMALS_ZERO_ON
+  _mm_setcsr(old_csr);
+#endif
+  TF_ASSERT_OK_AND_ASSIGN(const auto module, BuildHloModule(b));
+  const HloInstruction* root = GetRoot(*module);
+  ASSERT_THAT(root, GmockMatch(m::Constant()));
+}
+
 TEST(XlaBuilderTest, InvalidInputOutputAliasBufferDonor) {
   XlaBuilder b(TestName());
 
