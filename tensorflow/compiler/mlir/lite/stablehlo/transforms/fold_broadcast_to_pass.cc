@@ -59,7 +59,7 @@ class ConvertResultsBroadcastableShapeOp : public RewritePattern {
 // Determine op with shapes is valid. TODO: @lukeboyer - Move the
 // `TFL_OperandsHaveSameShapesOrBroadcastableShape` runtime verification trait
 // into a standard (not runtime verification) trait and change this function to
-// use only that interface. Curently there is no way to query derived runtime
+// use only that interface. Currently there is no way to query derived runtime
 // verification traits.
 bool IsRankSupported(Operation* op) {
   // These ops have no rank constraints.
@@ -73,6 +73,14 @@ bool IsRankSupported(Operation* op) {
 
   // Fallback, all implicit broadcast ops in tfl support at least rank 4.
   return llvm::cast<ShapedType>(op->getResultTypes()[0]).getRank() <= 4;
+}
+
+// Returns true when the op may be a broadcasting op. Broadcasting op is not
+// limited to TFL::BroadcastToOp, but also other ops that may change the shape
+// of a tensor to match the shape of another operand.
+bool MayBeBroadcastOp(Operation* op) {
+  return op && llvm::isa<TFL::BroadcastToOp, TFL::ReshapeOp, TFL::ExpandDimsOp,
+                         TFL::SqueezeOp>(op);
 }
 
 LogicalResult ConvertResultsBroadcastableShapeOp::matchAndRewrite(
@@ -93,7 +101,7 @@ LogicalResult ConvertResultsBroadcastableShapeOp::RewriteOp(
   // Check that the result shape is fully defined.
   auto result_type =
       mlir::dyn_cast_or_null<RankedTensorType>(op->getResultTypes().front());
-  if (!result_type || !result_type.hasStaticShape()) return failure();
+  if (!result_type) return failure();
 
   if (!IsRankSupported(op)) {
     return failure();
@@ -102,19 +110,39 @@ LogicalResult ConvertResultsBroadcastableShapeOp::RewriteOp(
   bool changed = false;
   for (uint64_t i = 0, e = op->getNumOperands(); i < e; ++i) {
     // Check that the i'th operand is a broadcast.
-    auto broadcast = llvm::dyn_cast_or_null<TFL::BroadcastToOp>(
-        op->getOpOperand(i).get().getDefiningOp());
-    if (!broadcast) continue;
+    auto broadcast = op->getOpOperand(i).get().getDefiningOp();
+    if (!broadcast || !MayBeBroadcastOp(broadcast)) {
+      continue;
+    }
+
+    auto broadcast_input = broadcast->getOperand(0);
+    if (!broadcast_input) {
+      continue;
+    }
 
     // Check that the operand of the broadcast has fully defined shape.
-    auto broadcast_arg_type = mlir::dyn_cast_or_null<RankedTensorType>(
-        broadcast.getInput().getType());
-    if (!broadcast_arg_type || !broadcast_arg_type.hasStaticShape()) continue;
+    // Fusing dynamic broadcast op (non static broadcast_arg_type shape)
+    // is experimental and theoretically unsafe, because checking equality on
+    // unknown dimensions in broadcasted shape is not reliable.
+    // TODO: Full dynamism support with symbolic shape comparisons.
+    auto broadcast_arg_type =
+        mlir::dyn_cast_or_null<RankedTensorType>(broadcast_input.getType());
+    if (!broadcast_arg_type) {
+      continue;
+    }
 
     // Check that the other argument has fully defined shape.
-    auto argument_type = mlir::dyn_cast_or_null<RankedTensorType>(
-        op->getOpOperand(1 - i).get().getType());
-    if (!argument_type || !argument_type.hasStaticShape()) continue;
+    auto argument = op->getOperand(1 - i);
+    auto argument_type =
+        mlir::dyn_cast_or_null<RankedTensorType>(argument.getType());
+    // When two operands are both dynamic broadcast op, it has high chance
+    // that the model is doing explicitly broadcasting. In this case, removing
+    // either broadcast op may result in incorrect output shape in the runtime.
+    // TODO: Full dynamism support with symbolic shape comparisons.
+    if (!argument_type || (!broadcast_arg_type.hasStaticShape() &&
+                           MayBeBroadcastOp(argument.getDefiningOp()))) {
+      continue;
+    }
 
     // Get the unbroadcasted shapes in the operand order.
     std::array<llvm::ArrayRef<int64_t>, 2> operand_shapes;
@@ -134,7 +162,7 @@ LogicalResult ConvertResultsBroadcastableShapeOp::RewriteOp(
 
     // Update the operand of the op to be the operand of the broadcast.
     rewriter.modifyOpInPlace(
-        op, [&]() { op->getOpOperand(i).set(broadcast.getInput()); });
+        op, [&]() { op->getOpOperand(i).set(broadcast->getOperand(0)); });
     changed = true;
   }
   return success(changed);
