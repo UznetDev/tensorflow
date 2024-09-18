@@ -4839,11 +4839,12 @@ class Subgraph {
     const int num_reduction_axes = NumElements(&axes_tensor);
     bool all_reductions_supported = false;
     bool use_legacy_path = false;
-    if (input_tensor.type == kTfLiteFloat32) {
+    if (input_tensor.type == kTfLiteFloat32 ||
+        input_tensor.type == kTfLiteUInt8 || input_tensor.type == kTfLiteInt8) {
       all_reductions_supported = true;
-      if (NumDimensions(&input_tensor) == 4) {
-        use_legacy_path = true;
-      }
+      // if (NumDimensions(&input_tensor) == 4) {
+      //   use_legacy_path = true;
+      // }
     } else {
       TF_LITE_ENSURE_STATUS(CheckTensorShape(logging_context, input_tensor, 4,
                                              node->inputs->data[0],
