@@ -121,7 +121,7 @@ absl::StatusOr<HloInstruction*> NormalizeBatchGather(
           dims.index_vector_dim());
   return gather->AddInstruction(HloInstruction::CreateGather(
       gather->shape(), gather_operand, gather_indices, updated_dims,
-      gather->gather_slice_sizes(), gather->indices_are_sorted()));
+      gather->gather_slice_sizes(), /*indices_are_sorted=*/false));
 }
 
 absl::StatusOr<HloInstruction*> NormalizeBatchScatter(
@@ -154,7 +154,7 @@ absl::StatusOr<HloInstruction*> NormalizeBatchScatter(
           scatter_dims_to_operand_dims, dims.index_vector_dim());
   return scatter->AddInstruction(HloInstruction::CreateScatter(
       scatter->shape(), scatter_operands, scatter_indices, scatter_updates,
-      scatter->to_apply(), updated_dims, scatter->indices_are_sorted(),
+      scatter->to_apply(), updated_dims, /*indices_are_sorted=*/false,
       scatter->unique_indices()));
 }
 
