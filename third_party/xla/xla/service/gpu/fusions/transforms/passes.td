@@ -273,6 +273,15 @@ def VectorizeLoadsAndStoresPass :
   let constructor = "CreateVectorizeLoadsAndStoresPass()";
 }
 
+def FuseLoopsPass : Pass<"xla-gpu-fuse-loops", "mlir::func::FuncOp"> {
+  let summary = "Fuse xla_gpu.loop.";
+  let description = [{
+    Fuses similar xla_gpu.loops into one.
+  }];
+  let dependentDialects = ["xla::gpu::XlaGpuDialect"];
+  let constructor = "CreateFuseLoopsPass()";
+}
+
 def PeelLoopsPass : Pass<"xla-gpu-peel-loops", "mlir::func::FuncOp"> {
   let summary = "Peels xla_gpu.loop.";
   let description = [{
